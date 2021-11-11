@@ -9,15 +9,38 @@ app.use(cors());
 
 const users = [];
 
-function checksExistsUserAccount(request, response, next) {
-  // Complete aqui
+
+function checkUserAccountExists(request, response, next) {
+  const { username } = request.headers;
+
+  const user = users.find((user) => user.username === username)
+
+  if (!user) {
+    return response.status(400).json({ error: "Account not found!" })
+  }
+
+  request.user = user;
+
+  return next();
 }
 
-function checksCreateTodosUserAvailability(request, response, next) {
-  // Complete aqui
+function checkTodosAvailability(request, response, next) {
+  const { user } = request;
+
+  toDoCount = user.todos.length + 1;
+
+  if (toDoCount > 10) {
+    if (user.pro === false) {
+      return response.status(400).json({ erro: "You can't create any more to-do's as a FREE member!" })
+    }
+
+    return next();
+  }
+
+  return next();
 }
 
-function checksTodoExists(request, response, next) {
+function checkTodoExists(request, response, next) {
   // Complete aqui
 }
 
@@ -38,7 +61,7 @@ app.post('/users', (request, response) => {
     id: uuidv4(),
     name,
     username,
-    pro: false,
+    pro: true,
     todos: []
   };
 
@@ -65,13 +88,13 @@ app.patch('/users/:id/pro', findUserById, (request, response) => {
   return response.json(user);
 });
 
-app.get('/todos', checksExistsUserAccount, (request, response) => {
+app.get('/todos', checkUserAccountExists, (request, response) => {
   const { user } = request;
 
   return response.json(user.todos);
 });
 
-app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (request, response) => {
+app.post('/todos', checkUserAccountExists, checkTodosAvailability, (request, response) => {
   const { title, deadline } = request.body;
   const { user } = request;
 
@@ -85,10 +108,11 @@ app.post('/todos', checksExistsUserAccount, checksCreateTodosUserAvailability, (
 
   user.todos.push(newTodo);
 
+
   return response.status(201).json(newTodo);
 });
 
-app.put('/todos/:id', checksTodoExists, (request, response) => {
+app.put('/todos/:id', checkTodoExists, (request, response) => {
   const { title, deadline } = request.body;
   const { todo } = request;
 
@@ -98,7 +122,7 @@ app.put('/todos/:id', checksTodoExists, (request, response) => {
   return response.json(todo);
 });
 
-app.patch('/todos/:id/done', checksTodoExists, (request, response) => {
+app.patch('/todos/:id/done', checkTodoExists, (request, response) => {
   const { todo } = request;
 
   todo.done = true;
@@ -106,7 +130,7 @@ app.patch('/todos/:id/done', checksTodoExists, (request, response) => {
   return response.json(todo);
 });
 
-app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, response) => {
+app.delete('/todos/:id', checkUserAccountExists, checkTodoExists, (request, response) => {
   const { user, todo } = request;
 
   const todoIndex = user.todos.indexOf(todo);
@@ -123,8 +147,8 @@ app.delete('/todos/:id', checksExistsUserAccount, checksTodoExists, (request, re
 module.exports = {
   app,
   users,
-  checksExistsUserAccount,
-  checksCreateTodosUserAvailability,
-  checksTodoExists,
+  checkUserAccountExists,
+  checkTodosAvailability,
+  checkTodoExists,
   findUserById
 };
